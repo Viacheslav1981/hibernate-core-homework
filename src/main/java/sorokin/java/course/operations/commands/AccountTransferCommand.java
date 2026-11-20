@@ -25,7 +25,7 @@ public class AccountTransferCommand implements OperationCommand {
             throw new IllegalArgumentException("source and target account id must be different");
         }
         int amount = consoleInput.readPositiveInt("Enter amount:", "amount");
-        accountService.transfer(fromAccountId, toAccountId, amount);
+       // accountService.transfer(fromAccountId, toAccountId, amount);
         System.out.println("Transfer completed from account " + fromAccountId + " to account " + toAccountId + ".");
     }
 

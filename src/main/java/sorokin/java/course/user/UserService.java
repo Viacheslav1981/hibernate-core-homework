@@ -1,21 +1,23 @@
 package sorokin.java.course.user;
 
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 import org.springframework.stereotype.Component;
 import sorokin.java.course.account.AccountService;
-import sorokin.java.course.user.User;
 
 import java.util.*;
 
 @Component
 public class UserService {
 
-    private int idCounter;
     private final Map<Integer, User> userMap;
     private final Set<String> takenLogins;
     private final AccountService accountService;
+    private final SessionFactory sessionFactory;
 
-    public UserService(AccountService accountService) {
-        this.idCounter = 0;
+    public UserService(AccountService accountService, SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
         this.userMap = new HashMap<>();
         this.takenLogins = new HashSet<>();
         this.accountService = accountService;
@@ -23,18 +25,29 @@ public class UserService {
 
     public User createUser(String login) {
         String normalizedLogin = validateLogin(login);
-        if (takenLogins.contains(normalizedLogin)) {
-            throw new IllegalArgumentException("User already exists with login=%s".formatted(normalizedLogin));
-        }
-
-        idCounter++;
-        var user = new User(idCounter, normalizedLogin, new ArrayList<>());
+        Session session = sessionFactory.getCurrentSession();
+        Transaction transaction = session.beginTransaction();
+        var user = new User(normalizedLogin, new ArrayList<>());
         var defaultAccount = accountService.createAccount(user);
         user.getAccountList().add(defaultAccount);
 
-        userMap.put(idCounter, user);
-        takenLogins.add(normalizedLogin);
+        userMap.put(user.getId(), user);
+        session.persist(user);
+        transaction.commit();
+
         return user;
+        //  }
+        //       if (takenLogins.contains(normalizedLogin)) {
+//            throw new IllegalArgumentException("User already exists with login=%s".formatted(normalizedLogin));
+//        }
+
+//        var user = new User(normalizedLogin, new ArrayList<>());
+//        var defaultAccount = accountService.createAccount(user);
+//        user.getAccountList().add(defaultAccount);
+//
+//        userMap.put(user.getId(), user);
+//       // takenLogins.add(normalizedLogin);
+//        return user;
     }
 
     public User findUserById(Integer id) {
