@@ -1,12 +1,12 @@
 package sorokin.java.course.account;
 
+import org.hibernate.SessionFactory;
 import org.springframework.stereotype.Component;
-import sorokin.java.course.account.Account;
+import sorokin.java.course.helper.TransactionHelper;
 import sorokin.java.course.user.User;
 
-import java.util.HashMap;
 import java.util.Comparator;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -15,8 +15,12 @@ public class AccountService {
 
     private final Map<Integer, Account> accountMap;
     private final AccountProperties accountProperties;
+    private final SessionFactory sessionFactory;
+    private final TransactionHelper transactionHelper;
 
-    public AccountService(AccountProperties accountProperties) {
+    public AccountService(AccountProperties accountProperties, SessionFactory sessionFactory, TransactionHelper transactionHelper) {
+        this.sessionFactory = sessionFactory;
+        this.transactionHelper = transactionHelper;
         this.accountMap = new HashMap<>();
         this.accountProperties = accountProperties;
     }
@@ -25,14 +29,33 @@ public class AccountService {
         if (user == null) {
             throw new IllegalArgumentException("user must not be null");
         }
-        Account newAccount = new Account(user, accountProperties.getDefaultAmount());
-        accountMap.put(newAccount.getId(), newAccount);
-        return newAccount;
+        return transactionHelper.executeTransaction(session -> {
+            Account newAccount = new Account(user, accountProperties.getDefaultAmount());
+            // session.persist(user);
+            session.persist(newAccount);
+            accountMap.put(newAccount.getId(), newAccount);
+            return newAccount;
+        });
+//        Account newAccount = new Account(user, accountProperties.getDefaultAmount());
+//        session.persist(user);
+//        session.persist(newAccount);
+//        accountMap.put(newAccount.getId(), newAccount);
+//        //session.flush();
+//        //transaction.commit();
+//        return newAccount;
     }
 
     public Optional<Account> findAccountById(Integer id) {
         validatePositiveId(id, "account id");
-        return Optional.ofNullable(accountMap.get(id));
+        return transactionHelper.executeTransaction(session -> {
+            Account account = session.find(Account.class, id);
+//            if (user == null) {
+//                throw new IllegalArgumentException("No such user with id=%s".formatted(id));
+//            }
+            return Optional.ofNullable(account);
+            // return account;
+        });
+        //  return Optional.ofNullable(accountMap.get(id));
     }
 
 //    public List<Account> getUserAccounts(Integer userId) {
@@ -59,31 +82,38 @@ public class AccountService {
     public void deposit(Integer toAccountId, Integer amount) {
         validatePositiveId(toAccountId, "account id");
         validatePositiveAmount(amount);
-        Account account = findAccountById(toAccountId)
-                .orElseThrow(() -> new IllegalArgumentException("No such account: id=%s".formatted(toAccountId)));
+        transactionHelper.executeTransaction(session -> {
+            Account account = findAccountById(toAccountId)
+                    .orElseThrow(() -> new IllegalArgumentException("No such account: id=%s".formatted(toAccountId)));
 
-        account.setMoneyAmount(account.getMoneyAmount() + amount);
+            account.setMoneyAmount(account.getMoneyAmount() + amount);
+            session.persist(account);
+            return account;
+        });
     }
 
-//    public Account closeAccount(Integer accountId) {
-//        validatePositiveId(accountId, "account id");
-//        Account accountToClose = findAccountById(accountId)
-//                .orElseThrow(() -> new IllegalArgumentException("No such account: id=%s".formatted(accountId)));
-//        var userId = accountToClose.getUserId();
-//        var userAccounts = getUserAccounts(Math.toIntExact(userId));
-//        if (userAccounts.size() == 1) {
-//            throw new IllegalStateException("Can't close the only one account");
-//        }
-//        var accountToTransferMoney = userAccounts.stream()
-//                .filter(it -> it.getId() != accountId)
-//                .min(Comparator.comparingInt(Account::getId))
-//                .orElseThrow();
-//
-//        var newAmount = Math.addExact(accountToTransferMoney.getMoneyAmount(), accountToClose.getMoneyAmount());
-//        accountToTransferMoney.setMoneyAmount(newAmount);
-//        accountMap.remove(accountId);
-//        return accountToClose;
-//    }
+    public Account closeAccount(Integer accountId) {
+        validatePositiveId(accountId, "account id");
+        return transactionHelper.executeTransaction(session -> {
+            Account accountToClose = findAccountById(accountId)
+                    .orElseThrow(() -> new IllegalArgumentException("No such account: id=%s".formatted(accountId)));
+            var userId = accountToClose.getUser().getId();
+            User user = session.find(User.class, userId);
+            var userAccounts = user.getAccountList();
+            if (userAccounts.size() == 1) {
+                throw new IllegalStateException("Can't close the only one account");
+            }
+            var accountToTransferMoney = userAccounts.stream()
+                    .filter(it -> it.getId() != accountId)
+                    .min(Comparator.comparingInt(Account::getId))
+                    .orElseThrow();
+
+            var newAmount = Math.addExact(accountToTransferMoney.getMoneyAmount(), accountToClose.getMoneyAmount());
+            accountToTransferMoney.setMoneyAmount(newAmount);
+            userAccounts.remove(accountToClose);
+            return accountToClose;
+        });
+    }
 
 //    public void transfer(int fromAccountId, int toAccountId, int amount) {
 //        validatePositiveId(fromAccountId, "source account id");

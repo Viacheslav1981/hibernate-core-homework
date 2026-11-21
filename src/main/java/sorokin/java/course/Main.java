@@ -3,9 +3,7 @@ package sorokin.java.course;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import sorokin.java.course.config.HibernateConfiguration;
 import sorokin.java.course.console.OperationsConsoleListener;
-import sorokin.java.course.user.User;
 
 public class Main {
     public static void main(String[] args) {
@@ -14,20 +12,11 @@ public class Main {
             consoleListener.runBank();
 
             SessionFactory sessionFactory = context.getBean(SessionFactory.class);
-//            Session session = sessionFactory.openSession();
-//            session.beginTransaction();
+
+//            try (Session session = sessionFactory.openSession()) {
 //
-//            User user = new User();
-//            user.setLogin("admin");
-//
-//            session.persist(user);
-//            session.getTransaction().commit();
+//            }
         }
-
-
-
-
-
 
 
     }

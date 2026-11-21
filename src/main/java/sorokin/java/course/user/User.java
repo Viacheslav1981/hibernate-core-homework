@@ -13,12 +13,12 @@ public class User {
     private int id;
     @Column(name = "login")
     private String login;
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Account> accountList;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER,  orphanRemoval = true)
+    private List<Account> accounts;
 
     public User(String login, List<Account> accountList) {
         this.login = login;
-        this.accountList = accountList;
+        this.accounts = accountList;
     }
 
     public User() {
@@ -38,11 +38,11 @@ public class User {
     }
 
     public List<Account> getAccountList() {
-        return accountList;
+        return accounts;
     }
 
     public void setAccountList(List<Account> accountList) {
-        this.accountList = accountList;
+        this.accounts = accountList;
     }
 
     @Override
@@ -50,7 +50,7 @@ public class User {
         return "User{" +
                 "id=" + id +
                 ", login='" + login + '\'' +
-                ", accountList=" + accountList +
+                ", accountList=" + accounts +
                 '}';
     }
 }
