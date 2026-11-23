@@ -1,55 +1,74 @@
 package sorokin.java.course.user;
 
+import org.hibernate.SessionFactory;
 import org.springframework.stereotype.Component;
 import sorokin.java.course.account.AccountService;
-import sorokin.java.course.user.User;
+import sorokin.java.course.helper.TransactionHelper;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class UserService {
 
-    private int idCounter;
-    private final Map<Integer, User> userMap;
-    private final Set<String> takenLogins;
     private final AccountService accountService;
+    private final SessionFactory sessionFactory;
+    private final TransactionHelper transactionHelper;
 
-    public UserService(AccountService accountService) {
-        this.idCounter = 0;
-        this.userMap = new HashMap<>();
-        this.takenLogins = new HashSet<>();
+    public UserService(AccountService accountService, SessionFactory sessionFactory, TransactionHelper transactionHelper) {
+        this.sessionFactory = sessionFactory;
+        this.transactionHelper = transactionHelper;
         this.accountService = accountService;
     }
 
     public User createUser(String login) {
+
         String normalizedLogin = validateLogin(login);
-        if (takenLogins.contains(normalizedLogin)) {
-            throw new IllegalArgumentException("User already exists with login=%s".formatted(normalizedLogin));
+        if (checkDoubleLogin(normalizedLogin)) {
+            throw new IllegalArgumentException("Login: " + normalizedLogin + " already exists!");
         }
-
-        idCounter++;
-        var user = new User(idCounter, normalizedLogin, new ArrayList<>());
-        var defaultAccount = accountService.createAccount(user);
-        user.getAccountList().add(defaultAccount);
-
-        userMap.put(idCounter, user);
-        takenLogins.add(normalizedLogin);
-        return user;
+        return transactionHelper.executeTransaction(session -> {
+            User user = new User(normalizedLogin, new ArrayList<>());
+            var defaultAccount = accountService.createAccount(user);
+            user.getAccountList().add(defaultAccount);
+            session.persist(user);
+            return user;
+        });
     }
 
     public User findUserById(Integer id) {
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("user id must be > 0");
         }
-        var user = userMap.get(id);
-        if (user == null) {
-            throw new IllegalArgumentException("No such user with id=%s".formatted(id));
-        }
-        return user;
+        return transactionHelper.executeTransaction(session -> {
+            User user = session.find(User.class, id);
+            if (user == null) {
+                throw new IllegalArgumentException("No such user with id=%s".formatted(id));
+            }
+            return user;
+        });
     }
 
+
     public List<User> findAll() {
-        return userMap.values().stream().toList();
+        return transactionHelper.executeTransaction(session ->
+                session.createQuery(
+                        "SELECT u FROM User u LEFT JOIN FETCH u.accounts",
+                        User.class
+                ).getResultList()
+        );
+    }
+
+    public boolean checkDoubleLogin(String login) {
+        return transactionHelper.executeTransaction(session -> {
+            User user = session.createQuery(
+                            "SELECT u FROM User u WHERE u.login = :login",
+                            User.class
+                    )
+                    .setParameter("login", login)
+                    .uniqueResult();
+            return user != null;
+        });
     }
 
     private String validateLogin(String login) {
@@ -59,3 +78,4 @@ public class UserService {
         return login.trim();
     }
 }
+
