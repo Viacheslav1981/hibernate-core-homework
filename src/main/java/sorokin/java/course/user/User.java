@@ -13,7 +13,7 @@ public class User {
     private int id;
     @Column(name = "login")
     private String login;
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER,  orphanRemoval = true)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private List<Account> accounts;
 
     public User(String login, List<Account> accountList) {
@@ -29,20 +29,8 @@ public class User {
         return id;
     }
 
-    public void setLogin(String login) {
-        this.login = login;
-    }
-
-    public String getLogin() {
-        return login;
-    }
-
     public List<Account> getAccountList() {
         return accounts;
-    }
-
-    public void setAccountList(List<Account> accountList) {
-        this.accounts = accountList;
     }
 
     @Override

@@ -20,14 +20,6 @@ public class TransactionHelper {
         Session session = sessionFactory.getCurrentSession();
 
         Transaction transaction = session.getTransaction();
-
-//        System.out.println("Session: " + session);
-//        System.out.println("Transaction active: " + transaction.isActive());
-//
-//        if (transaction.isActive()) {
-//            new Exception("Transaction already active!").printStackTrace();
-//        }
-
         boolean isTransactionOwner = !transaction.isActive();
 
         if (isTransactionOwner) {
@@ -36,7 +28,6 @@ public class TransactionHelper {
 
         try {
             T result = function.apply(session);
-
             if (isTransactionOwner) {
                 transaction.commit();
             }

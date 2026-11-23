@@ -5,13 +5,12 @@ import org.springframework.stereotype.Component;
 import sorokin.java.course.account.AccountService;
 import sorokin.java.course.helper.TransactionHelper;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class UserService {
 
-    private final Map<Integer, User> userMap;
-    private final Set<String> takenLogins;
     private final AccountService accountService;
     private final SessionFactory sessionFactory;
     private final TransactionHelper transactionHelper;
@@ -19,8 +18,6 @@ public class UserService {
     public UserService(AccountService accountService, SessionFactory sessionFactory, TransactionHelper transactionHelper) {
         this.sessionFactory = sessionFactory;
         this.transactionHelper = transactionHelper;
-        this.userMap = new HashMap<>();
-        this.takenLogins = new HashSet<>();
         this.accountService = accountService;
     }
 
