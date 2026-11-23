@@ -6,14 +6,11 @@ import sorokin.java.course.helper.TransactionHelper;
 import sorokin.java.course.user.User;
 
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @Component
 public class AccountService {
 
-    private final Map<Integer, Account> accountMap;
     private final AccountProperties accountProperties;
     private final SessionFactory sessionFactory;
     private final TransactionHelper transactionHelper;
@@ -21,7 +18,6 @@ public class AccountService {
     public AccountService(AccountProperties accountProperties, SessionFactory sessionFactory, TransactionHelper transactionHelper) {
         this.sessionFactory = sessionFactory;
         this.transactionHelper = transactionHelper;
-        this.accountMap = new HashMap<>();
         this.accountProperties = accountProperties;
     }
 
@@ -32,7 +28,6 @@ public class AccountService {
         return transactionHelper.executeTransaction(session -> {
             Account newAccount = new Account(user, accountProperties.getDefaultAmount());
             session.persist(newAccount);
-            accountMap.put(newAccount.getId(), newAccount);
             return newAccount;
         });
     }
